@@ -7,27 +7,31 @@ import {
 } from "@nestjs/common";
 import { CreateAdminDto } from "./dto/create-admin.dto";
 import { UpdateAdminDto } from "./dto/update-admin.dto";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { Admin } from "./entities/admin.entity";
+
 import * as bcrypt from "bcrypt";
 import { LoginAdminDto } from "./dto/login-admin.dto";
 import { JwtService } from "@nestjs/jwt";
 import { PasswordDto } from "./dto/password.dto";
-import { Portfolio } from "./entities/portfolio.entity";
 
+import { PrismaService } from "../prisma.service";
 import { MailerService } from "@nestjs-modules/mailer";
 import { EmailDto } from "./dto/email.dto";
 
+import {
+  Admin as AdminModel,
+  Portfolio as PortfolioModel,
+  Prisma,
+} from "@prisma/client";
+import { CloudinaryService } from "./cloudinary.service";
+
+// const parser= new DatauriParser()
 @Injectable()
 export class AdminService {
   constructor(
-    @InjectRepository(Admin)
-    private adminRepository: Repository<Admin>,
+    private readonly prismaService: PrismaService,
     private jwtService: JwtService,
-    @InjectRepository(Portfolio)
-    private portfolioRepository: Repository<Portfolio>,
-    private readonly mailerService: MailerService
+    private readonly mailerService: MailerService,
+    private cloudinary: CloudinaryService
   ) {}
   async create(createAdminDto: CreateAdminDto) {
     const data = { ...createAdminDto };
@@ -35,7 +39,7 @@ export class AdminService {
 
     data.password = await bcrypt.hash(data.password, 10);
 
-    const query = await this.adminRepository.save(data);
+    const query = await this.prismaService.admin.create({ data });
 
     return query
       ? { status: true, message: "Admin added successfully" }
@@ -71,8 +75,10 @@ export class AdminService {
     return `This action returns all admin`;
   }
 
-  async changePassword(id: number, passwordDto: PasswordDto) {
-    const details = await this.adminRepository.findOneBy({ id });
+  async changePassword(id: string, passwordDto: PasswordDto) {
+    const details = await this.prismaService.admin.findUnique({
+      where: { id },
+    });
     if (details) {
       const checkPassword = await bcrypt.compare(
         passwordDto.password,
@@ -80,10 +86,14 @@ export class AdminService {
       );
 
       if (checkPassword) {
-        const query = await this.adminRepository.update(
-          { id },
-          { password: await bcrypt.hash(passwordDto.newPassword, 10) }
-        );
+        const query = await this.prismaService.admin.update({
+          data: {
+            password: await bcrypt.hash(passwordDto.newPassword, 10),
+          },
+          where: {
+            id,
+          },
+        });
 
         return query
           ? { status: true, message: "Password changed successfully" }
@@ -96,17 +106,19 @@ export class AdminService {
     throw new NotFoundException();
   }
 
-  findOne(email: string): Promise<Admin | null> {
-    return this.adminRepository.findOneBy({ email });
+  async findOne(email: string): Promise<AdminModel | null> {
+    return await this.prismaService.admin.findFirst({ where: { email } });
   }
 
-  async update(id: number, updateAdminDto: UpdateAdminDto) {
-    const check = await this.adminRepository.findOneBy({ id });
+  async update(id: string, updateAdminDto: UpdateAdminDto) {
+    const check = await this.prismaService.admin.findFirst({ where: { id } });
     if (check) {
-      const query = await this.adminRepository.update(
-        { id },
-        { ...updateAdminDto }
-      );
+      const query = await this.prismaService.admin.update({
+        where: {
+          id,
+        },
+        data: { ...updateAdminDto },
+      });
 
       return !!query
         ? { status: true, message: "Profile updated successfully" }
@@ -119,18 +131,31 @@ export class AdminService {
     galleryUploadDto: GalleryUploadDto,
     file: Express.Multer.File
   ) {
-    const query = await this.portfolioRepository.save({
-      title: galleryUploadDto.title,
-      image: file.path,
-    });
+    return await this.cloudinary
+      .uploadImage(file)
+      .then(async (response) => {
+        if (response) {
+          
+          const query = await this.prismaService.portfolio.create({
+            data: {
+              title: galleryUploadDto.title,
+              image: response?.secure_url,
+            },
+          });
 
-    if (query) return { status: true, message: "Portfolio added successfully" };
+          if (query)
+            return { status: true, message: "Portfolio added successfully" };
 
-    throw new BadRequestException("Unable to upload portfolio");
+          throw new BadRequestException("Unable to upload portfolio");
+        }
+      })
+      .catch(() => {
+        throw new BadRequestException("Invalid file type.");
+      });
   }
 
-  async removePortfolio(id: number) {
-    const query = await this.portfolioRepository.delete({ id });
+  async removePortfolio(id: string) {
+    const query = await this.prismaService.portfolio.delete({ where: { id } });
 
     return query
       ? { status: true, message: "Portfolio deleted successfully" }
@@ -138,7 +163,7 @@ export class AdminService {
   }
 
   async getPortfolios() {
-    const query = await this.portfolioRepository.find({});
+    const query = await this.prismaService.portfolio.findMany({});
     return {
       status: true,
       message: "portfolio fetched",

@@ -4,12 +4,14 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  ObjectIdColumn,
+  ObjectId,
 } from "typeorm";
-
+// import { ObjectId } from "mongodb";
 @Entity()
 export class Portfolio {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @ObjectIdColumn()
+  _id: ObjectId;
 
   @Column()
   title: string;

@@ -1,14 +1,17 @@
+// import { ObjectId } from "mongodb";
 import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
+  ObjectIdColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  ObjectId,
 } from "typeorm";
 @Entity()
 export class Admin {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @ObjectIdColumn()
+  _id: ObjectId;
 
   @Column()
   firstName: string;

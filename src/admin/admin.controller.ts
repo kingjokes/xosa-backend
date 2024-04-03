@@ -91,25 +91,27 @@ export class AdminController {
   @UseGuards(AuthGuard)
   @Post("upload")
   @UseInterceptors(
-    FileInterceptor("file", {
-      storage: diskStorage({
-        // Specify where to save the file
-        destination: (req, file, cb) => {
-          cb(null, "uploads");
-        },
-        // Specify the file name
-        filename: (req, file, cb) => {
-          cb(null, Date.now() + "-" + file.originalname);
-        },
-      }),
-    })
+    FileInterceptor("file", 
+    // {
+    //   storage: diskStorage({
+    //     // Specify where to save the file
+    //     destination: (req, file, cb) => {
+    //       cb(null, "uploads");
+    //     },
+    //     // Specify the file name
+    //     filename: (req, file, cb) => {
+    //       cb(null, Date.now() + "-" + file.originalname);
+    //     },
+    //   }),
+    // }
+    )
   )
-  uploadFile(
+ async uploadFile(
     @Body() galleryUploadDto: GalleryUploadDto,
     @UploadedFile() file: Express.Multer.File
   ) {
     try {
-      return this.adminService.uploadFile(galleryUploadDto, file);
+      return await this.adminService.uploadFile(galleryUploadDto, file);
     } catch (err) {
       throw new HttpException(
         {
@@ -136,13 +138,13 @@ export class AdminController {
 
   @Patch(":id")
   update(@Param("id") id: string, @Body() updateAdminDto: UpdateAdminDto) {
-    return this.adminService.update(+id, updateAdminDto);
+    return this.adminService.update(id, updateAdminDto);
   }
 
   @UseGuards(AuthGuard)
   @Delete("portfolio/:id")
   removePortfolio(@Param("id") id: string) {
-    return this.adminService.removePortfolio(+id);
+    return this.adminService.removePortfolio(id);
   }
 
   @Post("send")
