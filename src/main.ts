@@ -6,14 +6,11 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
-      "https://glambyxosah.com",
-      "https://glambyxosa.com",
+      ...process.env.ALLOWED_URL?.split(' ')
     ],
     methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
     credentials: true,
   });
-  await app.listen(3000);
+  await app.listen(3000 ||process.env.PORT);
 }
 bootstrap();

@@ -27,7 +27,7 @@ import { ConfigModule } from "@nestjs/config";
         },
       },
       defaults: {
-        from: '"Notify" <notify@glambyxosah.com>',
+        from: process.env.SENDER_EMAIL,
       },
       template: {
         dir: __dirname + "/templates",

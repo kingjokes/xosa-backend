@@ -173,8 +173,8 @@ export class AdminService {
 
   async sendEmail(emailDto: EmailDto) {
     return await this.mailerService.sendMail({
-      to: "pauljokotagba@gmail.com", // list of receivers
-      from: "notify@glambyxosah.com", // sender address
+      to: process.env.ADMIN_EMAIL, // list of receivers
+      from: process.env.SENDER_EMAIL, // sender address
       subject: "A contact message from GlambyXosah", // Subject line
       text: "Notification", // plaintext body
       html: `<div>
